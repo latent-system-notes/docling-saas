@@ -24,7 +24,11 @@ def setup_offline_environment():
     # Set HuggingFace cache to local models directory
     os.environ["HF_HOME"] = str(HUGGINGFACE_MODELS_DIR)
     os.environ["HF_HUB_CACHE"] = str(HUGGINGFACE_MODELS_DIR / "hub")
-    os.environ["TRANSFORMERS_CACHE"] = str(HUGGINGFACE_MODELS_DIR / "transformers")
+
+    # Remove deprecated TRANSFORMERS_CACHE if set - it can point to
+    # a non-existent directory and break offline model resolution.
+    # Modern transformers uses HF_HOME / HF_HUB_CACHE instead.
+    os.environ.pop("TRANSFORMERS_CACHE", None)
 
     # Set EasyOCR model storage
     os.environ["EASYOCR_MODULE_PATH"] = str(EASYOCR_MODELS_DIR)
@@ -122,6 +126,14 @@ MODELS_INFO = {
         "size_mb": 4800,
         "required": False,
         "hf_repo": "ibm-granite/granite-vision-3.1-2b-preview",
+        "subfolder": None,
+    },
+    "chunker_tokenizer": {
+        "name": "Chunker Tokenizer (BGE)",
+        "description": "Tokenizer used by HybridChunker for document chunking",
+        "size_mb": 1,
+        "required": True,
+        "hf_repo": "BAAI/bge-small-en-v1.5",
         "subfolder": None,
     },
     "easyocr_en": {

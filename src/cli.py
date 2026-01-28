@@ -226,6 +226,77 @@ def clear():
         console.print("[red]Failed to clear cache[/red]")
 
 
+@cli.command("setup-offline")
+@click.option(
+    "--include-optional",
+    is_flag=True,
+    help="Also download optional models (VLM, EasyOCR)",
+)
+def setup_offline(include_optional: bool):
+    """Download all required models and configure for offline use.
+
+    This downloads models to ./models and ensures the app can run
+    fully offline. Run this once before using serve or serve-app.
+    """
+    import os
+    from .model_manager import ModelManager
+    from .config import HUGGINGFACE_MODELS_DIR
+
+    # Temporarily disable offline mode so we can download
+    os.environ["HF_HUB_OFFLINE"] = "0"
+    os.environ["TRANSFORMERS_OFFLINE"] = "0"
+
+    manager = ModelManager()
+    console.print(f"[bold]Models directory: {manager.models_dir}[/bold]")
+    console.print()
+
+    def progress_callback(msg):
+        console.print(f"  {msg}")
+
+    # Step 1: Try to copy from system cache first
+    console.print("[bold]Step 1: Copying models from system cache...[/bold]")
+    copy_results = manager.copy_from_cache(progress_callback=progress_callback)
+    if copy_results:
+        copied = sum(1 for v in copy_results.values() if v)
+        console.print(f"[green]  Copied {copied}/{len(copy_results)} items from cache[/green]")
+    else:
+        console.print("  No cached models found")
+    console.print()
+
+    # Step 2: Download any missing required models
+    console.print("[bold]Step 2: Downloading required models...[/bold]")
+    results = manager.download_all(
+        include_optional=include_optional,
+        progress_callback=progress_callback,
+    )
+    success_count = sum(1 for v in results.values() if v)
+    console.print(f"[green]  {success_count}/{len(results)} models ready[/green]")
+    console.print()
+
+    # Step 3: Verify all required models are available
+    console.print("[bold]Step 3: Verifying models...[/bold]")
+    statuses = manager.get_model_status()
+    all_required_ready = True
+    for s in statuses:
+        status_str = "[green]Ready[/green]" if s.downloaded else "[red]Missing[/red]"
+        marker = "[yellow]*[/yellow]" if s.required else " "
+        console.print(f"  {marker} {s.name}: {status_str}")
+        if s.required and not s.downloaded:
+            all_required_ready = False
+
+    console.print()
+    if all_required_ready:
+        console.print("[green bold]All required models are ready! You can now run offline.[/green bold]")
+        console.print(f"  Start the app: [cyan]docling-playground serve-app[/cyan]")
+    else:
+        console.print("[red bold]Some required models are missing.[/red bold]")
+        console.print("  Check your internet connection and try again.")
+
+    # Re-enable offline mode
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
+
 @cli.command("serve-app")
 @click.option(
     "--host",
