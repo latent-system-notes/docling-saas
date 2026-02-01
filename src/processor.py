@@ -18,7 +18,7 @@ from docling.datamodel.pipeline_options import (
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 
-from .config import Accelerator, OCRLibrary, PipelineType, enable_offline_mode, is_offline_mode
+from .config import Accelerator, OCRLibrary, PipelineType, enable_offline_mode, is_offline_mode, EASYOCR_MODELS_DIR
 
 logger = logging.getLogger("docling-playground.processor")
 from .models import (
@@ -58,6 +58,8 @@ class DocumentProcessor:
             return EasyOcrOptions(
                 lang=options.ocr_languages,
                 force_full_page_ocr=options.force_full_page_ocr,
+                model_storage_directory=str(EASYOCR_MODELS_DIR),
+                download_enabled=False,  # Disable downloads - use local models only
             )
         elif options.ocr_library == OCRLibrary.RAPIDOCR:
             return RapidOcrOptions(
@@ -159,7 +161,12 @@ class DocumentProcessor:
         logger.info(f"Processing file: {file_path}")
         logger.info(f"Offline mode: {is_offline_mode()}")
         logger.info(f"Pipeline: {options.pipeline.value}, Accelerator: {options.accelerator.value}")
-        logger.info(f"OCR enabled: {options.ocr_enabled}, library: {options.ocr_library.value if options.ocr_enabled else 'N/A'}")
+        if options.ocr_enabled:
+            logger.info(f"OCR enabled: True, library: {options.ocr_library.value}")
+            if options.ocr_library == OCRLibrary.EASYOCR:
+                logger.info(f"EasyOCR model directory: {EASYOCR_MODELS_DIR}")
+        else:
+            logger.info("OCR enabled: False")
         logger.info(f"Advanced features - Table structure: {options.do_table_structure}, Code enrichment: {options.do_code_enrichment}")
         logger.info(f"Advanced features - Formula enrichment: {options.do_formula_enrichment}, Picture description: {options.do_picture_description}")
 
