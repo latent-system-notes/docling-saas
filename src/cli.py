@@ -334,7 +334,7 @@ def serve_app(host: str, port: int, build: bool, dev: bool):
 )
 @click.option(
     "--ocr-library",
-    type=click.Choice(["rapidocr", "easyocr", "tesseract"]),
+    type=click.Choice(["rapidocr", "easyocr"]),
     default="easyocr",
     help="OCR library to use",
 )

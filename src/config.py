@@ -99,7 +99,6 @@ class OCRLibrary(str, Enum):
     """Supported OCR libraries."""
     RAPIDOCR = "rapidocr"
     EASYOCR = "easyocr"
-    TESSERACT = "tesseract"
 
 
 class OutputFormat(str, Enum):
@@ -128,17 +127,12 @@ OCR_LANGUAGES = {
         "en", "ar", "zh_sim", "zh_tra", "ja", "ko",
         "fr", "de", "es", "ru", "pt", "it", "nl", "pl", "tr", "vi", "th"
     ],
-    OCRLibrary.TESSERACT: [
-        "eng", "ara", "chi_sim", "chi_tra", "jpn", "kor",
-        "fra", "deu", "spa", "rus", "por", "ita", "nld", "pol", "tur"
-    ],
 }
 
 # Default language mappings (normalized to library-specific codes)
 DEFAULT_OCR_LANGUAGE = {
     OCRLibrary.RAPIDOCR: "en",
     OCRLibrary.EASYOCR: "en",
-    OCRLibrary.TESSERACT: "eng",
 }
 
 # Model information for model management

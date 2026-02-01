@@ -10,13 +10,10 @@ from docling.datamodel.pipeline_options import (
     AcceleratorDevice,
     AcceleratorOptions,
     EasyOcrOptions,
-    OcrMacOptions,
     PdfPipelineOptions,
     RapidOcrOptions,
     TableFormerMode,
     TableStructureOptions,
-    TesseractCliOcrOptions,
-    TesseractOcrOptions,
 )
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
@@ -66,18 +63,6 @@ class DocumentProcessor:
             return RapidOcrOptions(
                 force_full_page_ocr=options.force_full_page_ocr,
             )
-        elif options.ocr_library == OCRLibrary.TESSERACT:
-            # Try tesserocr first, fall back to CLI
-            try:
-                return TesseractOcrOptions(
-                    lang=options.ocr_languages,
-                    force_full_page_ocr=options.force_full_page_ocr,
-                )
-            except ImportError:
-                return TesseractCliOcrOptions(
-                    lang=options.ocr_languages,
-                    force_full_page_ocr=options.force_full_page_ocr,
-                )
 
         return None
 
@@ -119,6 +104,9 @@ class DocumentProcessor:
                 accelerator_options=accelerator_options,
                 do_ocr=options.ocr_enabled,
                 do_table_structure=options.do_table_structure,
+                do_code_enrichment=options.do_code_enrichment,
+                do_formula_enrichment=options.do_formula_enrichment,
+                do_picture_description=options.do_picture_description,
                 table_structure_options=TableStructureOptions(
                     mode=TableFormerMode.ACCURATE,
                 ),
@@ -154,6 +142,9 @@ class DocumentProcessor:
             or self._current_options.ocr_languages != options.ocr_languages
             or self._current_options.force_full_page_ocr != options.force_full_page_ocr
             or self._current_options.do_table_structure != options.do_table_structure
+            or self._current_options.do_code_enrichment != options.do_code_enrichment
+            or self._current_options.do_formula_enrichment != options.do_formula_enrichment
+            or self._current_options.do_picture_description != options.do_picture_description
         )
 
     def process_file(
@@ -167,8 +158,10 @@ class DocumentProcessor:
 
         logger.info(f"Processing file: {file_path}")
         logger.info(f"Offline mode: {is_offline_mode()}")
-        logger.info(f"OCR enabled: {options.ocr_enabled}, library: {options.ocr_library.value if options.ocr_enabled else 'N/A'}")
         logger.info(f"Pipeline: {options.pipeline.value}, Accelerator: {options.accelerator.value}")
+        logger.info(f"OCR enabled: {options.ocr_enabled}, library: {options.ocr_library.value if options.ocr_enabled else 'N/A'}")
+        logger.info(f"Advanced features - Table structure: {options.do_table_structure}, Code enrichment: {options.do_code_enrichment}")
+        logger.info(f"Advanced features - Formula enrichment: {options.do_formula_enrichment}, Picture description: {options.do_picture_description}")
 
         timing = ProcessingTiming(total_seconds=0)
         start_time = time.perf_counter()

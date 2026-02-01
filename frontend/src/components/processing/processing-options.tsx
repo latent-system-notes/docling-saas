@@ -181,40 +181,58 @@ export function ProcessingOptions({
       {/* Advanced Features */}
       <AccordionItem value="advanced">
         <AccordionTrigger>Advanced Features</AccordionTrigger>
-        <AccordionContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <div className="flex items-center justify-between">
+        <AccordionContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
               <Label>Table Structure</Label>
-              <Switch
-                checked={options.do_table_structure}
-                onCheckedChange={(v) => onUpdate("do_table_structure", v)}
-              />
+              <p className="text-xs text-muted-foreground">
+                Detect and extract table rows, columns, and cells
+              </p>
             </div>
-            <div className="flex items-center justify-between">
+            <Switch
+              checked={options.do_table_structure}
+              onCheckedChange={(v) => onUpdate("do_table_structure", v)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
               <Label>Code Enrichment</Label>
-              <Switch
-                checked={options.do_code_enrichment}
-                onCheckedChange={(v) => onUpdate("do_code_enrichment", v)}
-              />
+              <p className="text-xs text-muted-foreground">
+                Detect and preserve code blocks with formatting
+              </p>
             </div>
-            <div className="flex items-center justify-between">
+            <Switch
+              checked={options.do_code_enrichment}
+              onCheckedChange={(v) => onUpdate("do_code_enrichment", v)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
               <Label>Formula Enrichment</Label>
-              <Switch
-                checked={options.do_formula_enrichment}
-                onCheckedChange={(v) =>
-                  onUpdate("do_formula_enrichment", v)
-                }
-              />
+              <p className="text-xs text-muted-foreground">
+                Detect and extract mathematical formulas
+              </p>
             </div>
-            <div className="flex items-center justify-between">
+            <Switch
+              checked={options.do_formula_enrichment}
+              onCheckedChange={(v) =>
+                onUpdate("do_formula_enrichment", v)
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
               <Label>Picture Description</Label>
-              <Switch
-                checked={options.do_picture_description}
-                onCheckedChange={(v) =>
-                  onUpdate("do_picture_description", v)
-                }
-              />
+              <p className="text-xs text-muted-foreground">
+                Generate AI descriptions for images (requires VLM)
+              </p>
             </div>
+            <Switch
+              checked={options.do_picture_description}
+              onCheckedChange={(v) =>
+                onUpdate("do_picture_description", v)
+              }
+            />
           </div>
         </AccordionContent>
       </AccordionItem>
