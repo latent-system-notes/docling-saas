@@ -207,23 +207,36 @@ class ModelManager:
             if progress_callback:
                 progress_callback(f"Downloading EasyOCR models for {languages}...")
 
+            # Ensure directory exists
+            self.easyocr_dir.mkdir(parents=True, exist_ok=True)
+
             # Set environment to use local directory
             os.environ["EASYOCR_MODULE_PATH"] = str(self.easyocr_dir)
 
+            if progress_callback:
+                progress_callback(f"EasyOCR directory: {self.easyocr_dir}")
+
             import easyocr
             # Initialize reader to trigger download
+            if progress_callback:
+                progress_callback("Initializing EasyOCR reader (this downloads models)...")
+
             reader = easyocr.Reader(
                 languages,
                 model_storage_directory=str(self.easyocr_dir),
                 download_enabled=True,
                 gpu=False,
-                verbose=False,
+                verbose=True,  # Enable verbose to see download progress
             )
 
             if progress_callback:
                 progress_callback(f"EasyOCR models downloaded for {languages}")
             return True
 
+        except ImportError as e:
+            if progress_callback:
+                progress_callback(f"EasyOCR not installed: {e}")
+            return False
         except Exception as e:
             if progress_callback:
                 progress_callback(f"Failed to download EasyOCR: {e}")
