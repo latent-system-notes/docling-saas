@@ -33,7 +33,7 @@ def models():
     "--all",
     "download_all",
     is_flag=True,
-    help="Download all models including optional (EasyOCR, RapidOCR, VLM)",
+    help="Download all models including optional (EasyOCR, VLM) for full offline use",
 )
 @click.option(
     "--docling",
@@ -43,7 +43,7 @@ def models():
 @click.option(
     "--vlm",
     is_flag=True,
-    help="Download VLM model (large, ~5GB)",
+    help="Download VLM model (granite-docling-258M, ~500MB)",
 )
 @click.option(
     "--easyocr",
@@ -57,19 +57,18 @@ def models():
     help="Specific EasyOCR languages to download (e.g., --easyocr-lang en --easyocr-lang ar)",
 )
 @click.option(
-    "--rapidocr",
-    is_flag=True,
-    help="Verify RapidOCR models (bundled with package)",
-)
-@click.option(
     "-v", "--verbose",
     is_flag=True,
     help="Enable verbose logging",
 )
-def download(output, download_all, docling, vlm, easyocr, easyocr_lang, rapidocr, verbose):
-    """Download models to ./models directory for offline use."""
+def download(output, download_all, docling, vlm, easyocr, easyocr_lang, verbose):
+    """Download models to ./models directory for offline use.
+
+    By default, downloads only required models.
+    Use --all to download everything for full offline capability.
+    """
     import logging
-    from .config import disable_offline_mode, is_offline_mode, MODELS_DIR, EASYOCR_MODELS_DIR
+    from .config import disable_offline_mode, enable_offline_mode, is_offline_mode
     from .model_manager import ModelManager
 
     # Set logging level
@@ -86,27 +85,46 @@ def download(output, download_all, docling, vlm, easyocr, easyocr_lang, rapidocr
         console.print(f"  [dim]{msg}[/dim]")
 
     console.print(f"[bold]Models directory:[/bold] {manager.models_dir}")
-    console.print(f"[bold]HuggingFace cache:[/bold] {manager.huggingface_dir}")
-    console.print(f"[bold]EasyOCR cache:[/bold] {manager.easyocr_dir}")
-    console.print(f"[bold]Offline mode:[/bold] {'[red]DISABLED[/red]' if not is_offline_mode() else '[green]ENABLED[/green]'} (downloads allowed)")
     console.print()
 
     if download_all:
-        console.print("[bold cyan]Downloading ALL models (HuggingFace + EasyOCR + RapidOCR)...[/bold cyan]")
+        console.print("[bold cyan]Downloading ALL models for full offline use...[/bold cyan]")
         console.print()
 
-        # Download HuggingFace models (includes EasyOCR and RapidOCR check)
+        # Step 1: Try to copy from system cache first
+        console.print("[bold]Step 1: Checking system cache...[/bold]")
+        copy_results = manager.copy_from_cache(progress_callback=progress_callback)
+        if copy_results:
+            copied = sum(1 for v in copy_results.values() if v)
+            console.print(f"  [green]Copied {copied}/{len(copy_results)} items from cache[/green]")
+        console.print()
+
+        # Step 2: Download all models (including optional)
+        console.print("[bold]Step 2: Downloading models...[/bold]")
         results = manager.download_all(include_optional=True, progress_callback=progress_callback)
+        console.print()
+
+        # Step 3: Verify all models
+        console.print("[bold]Step 3: Verifying models...[/bold]")
+        statuses = manager.get_model_status()
+        all_required_ready = True
+        for s in statuses:
+            status_str = "[green]Ready[/green]" if s.downloaded else "[red]Missing[/red]"
+            marker = "[yellow]*[/yellow]" if s.required else " "
+            console.print(f"  {marker} {s.name}: {status_str}")
+            if s.required and not s.downloaded:
+                all_required_ready = False
 
         console.print()
-        console.print("[bold]Download Summary:[/bold]")
-        success_count = sum(1 for v in results.values() if v)
-        for model_id, success in results.items():
-            status = "[green]OK[/green]" if success else "[red]FAILED[/red]"
-            console.print(f"  {model_id}: {status}")
+        if all_required_ready:
+            console.print("[bold green]All models ready! You can now run offline.[/bold green]")
+            console.print(f"  Start the app: [cyan]docling-playground serve[/cyan]")
+        else:
+            console.print("[bold red]Some required models are missing.[/bold red]")
+            console.print("  Check your internet connection and try again.")
 
-        console.print()
-        console.print(f"[bold green]Downloaded {success_count}/{len(results)} models[/bold green]")
+        # Re-enable offline mode
+        enable_offline_mode()
         return
 
     downloaded = False
@@ -118,8 +136,8 @@ def download(output, download_all, docling, vlm, easyocr, easyocr_lang, rapidocr
         downloaded = True
 
     if vlm:
-        console.print("[bold]Downloading VLM model (this may take a while)...[/bold]")
-        manager.download_hf_model("ibm-granite/granite-vision-3.1-2b-preview", progress_callback)
+        console.print("[bold]Downloading VLM model (granite-docling-258M)...[/bold]")
+        manager.download_hf_model("ibm-granite/granite-docling-258M", progress_callback)
         downloaded = True
 
     if easyocr or easyocr_lang:
@@ -128,17 +146,15 @@ def download(output, download_all, docling, vlm, easyocr, easyocr_lang, rapidocr
         manager.download_easyocr_model(languages, progress_callback)
         downloaded = True
 
-    if rapidocr:
-        console.print("[bold]Verifying RapidOCR models...[/bold]")
-        manager.download_rapidocr_models(progress_callback)
-        downloaded = True
-
     if not downloaded:
         # Download required by default
         console.print("[bold]Downloading required models...[/bold]")
         results = manager.download_required(progress_callback=progress_callback)
         success_count = sum(1 for v in results.values() if v)
         console.print(f"[green]Downloaded {success_count}/{len(results)} required models[/green]")
+
+    # Re-enable offline mode
+    enable_offline_mode()
 
 
 @models.command("copy-from-cache")
@@ -225,74 +241,6 @@ def clear():
         console.print("[green]Cache cleared successfully[/green]")
     else:
         console.print("[red]Failed to clear cache[/red]")
-
-
-@cli.command("setup-offline")
-@click.option(
-    "--include-optional",
-    is_flag=True,
-    help="Also download optional models (VLM, EasyOCR)",
-)
-def setup_offline(include_optional: bool):
-    """Download all required models and configure for offline use.
-
-    This downloads models to ./models and ensures the app can run
-    fully offline. Run this once before using serve or serve-app.
-    """
-    from .config import disable_offline_mode, enable_offline_mode
-    from .model_manager import ModelManager
-
-    # Disable offline mode for downloads
-    disable_offline_mode()
-
-    manager = ModelManager()
-    console.print(f"[bold]Models directory: {manager.models_dir}[/bold]")
-    console.print()
-
-    def progress_callback(msg):
-        console.print(f"  {msg}")
-
-    # Step 1: Try to copy from system cache first
-    console.print("[bold]Step 1: Copying models from system cache...[/bold]")
-    copy_results = manager.copy_from_cache(progress_callback=progress_callback)
-    if copy_results:
-        copied = sum(1 for v in copy_results.values() if v)
-        console.print(f"[green]  Copied {copied}/{len(copy_results)} items from cache[/green]")
-    else:
-        console.print("  No cached models found")
-    console.print()
-
-    # Step 2: Download any missing required models
-    console.print("[bold]Step 2: Downloading required models...[/bold]")
-    results = manager.download_all(
-        include_optional=include_optional,
-        progress_callback=progress_callback,
-    )
-    success_count = sum(1 for v in results.values() if v)
-    console.print(f"[green]  {success_count}/{len(results)} models ready[/green]")
-    console.print()
-
-    # Step 3: Verify all required models are available
-    console.print("[bold]Step 3: Verifying models...[/bold]")
-    statuses = manager.get_model_status()
-    all_required_ready = True
-    for s in statuses:
-        status_str = "[green]Ready[/green]" if s.downloaded else "[red]Missing[/red]"
-        marker = "[yellow]*[/yellow]" if s.required else " "
-        console.print(f"  {marker} {s.name}: {status_str}")
-        if s.required and not s.downloaded:
-            all_required_ready = False
-
-    console.print()
-    if all_required_ready:
-        console.print("[green bold]All required models are ready! You can now run offline.[/green bold]")
-        console.print(f"  Start the app: [cyan]docling-playground serve-app[/cyan]")
-    else:
-        console.print("[red bold]Some required models are missing.[/red bold]")
-        console.print("  Check your internet connection and try again.")
-
-    # Re-enable offline mode
-    enable_offline_mode()
 
 
 @cli.command("serve")
