@@ -14,9 +14,16 @@ export function useModels() {
     queryFn: api.models.diskUsage,
   });
 
+  const offlineStatusQuery = useQuery({
+    queryKey: ["offline-status"],
+    queryFn: api.models.offlineStatus,
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["models"] });
     queryClient.invalidateQueries({ queryKey: ["disk-usage"] });
+    queryClient.invalidateQueries({ queryKey: ["offline-status"] });
   };
 
   const downloadModel = useMutation({
@@ -34,6 +41,16 @@ export function useModels() {
     onSuccess: invalidate,
   });
 
+  const downloadEasyOCR = useMutation({
+    mutationFn: (languages: string[]) => api.models.downloadEasyOCR(languages),
+    onSuccess: invalidate,
+  });
+
+  const verifyRapidOCR = useMutation({
+    mutationFn: api.models.verifyRapidOCR,
+    onSuccess: invalidate,
+  });
+
   const clearCache = useMutation({
     mutationFn: api.models.clearCache,
     onSuccess: invalidate,
@@ -42,10 +59,13 @@ export function useModels() {
   return {
     models: modelsQuery.data ?? [],
     diskUsage: diskUsageQuery.data ?? null,
+    offlineStatus: offlineStatusQuery.data ?? null,
     isLoading: modelsQuery.isLoading,
     downloadModel,
     downloadRequired,
     downloadAll,
+    downloadEasyOCR,
+    verifyRapidOCR,
     clearCache,
   };
 }

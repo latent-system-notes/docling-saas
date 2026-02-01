@@ -1,8 +1,16 @@
 """Configuration and constants for Docling Playground."""
 
+import logging
 import os
 from enum import Enum
 from pathlib import Path
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("docling-playground")
 
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
@@ -33,22 +41,40 @@ def setup_model_directories():
     # Set EasyOCR model storage
     os.environ["EASYOCR_MODULE_PATH"] = str(EASYOCR_MODELS_DIR)
 
+    logger.debug(f"Models directory: {MODELS_DIR}")
+    logger.debug(f"HF_HOME: {os.environ.get('HF_HOME')}")
+    logger.debug(f"EASYOCR_MODULE_PATH: {os.environ.get('EASYOCR_MODULE_PATH')}")
+
 
 def enable_offline_mode():
     """Enable offline mode - no downloads allowed."""
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    logger.info("Offline mode ENABLED - models will be loaded from local cache only")
 
 
 def disable_offline_mode():
     """Disable offline mode - allow downloads."""
     os.environ["HF_HUB_OFFLINE"] = "0"
     os.environ["TRANSFORMERS_OFFLINE"] = "0"
+    logger.info("Offline mode DISABLED - downloads are now allowed")
 
 
 def is_offline_mode() -> bool:
     """Check if offline mode is enabled."""
     return os.environ.get("HF_HUB_OFFLINE") == "1"
+
+
+def get_offline_status() -> dict:
+    """Get detailed offline mode status."""
+    return {
+        "offline_mode": is_offline_mode(),
+        "hf_hub_offline": os.environ.get("HF_HUB_OFFLINE", "0"),
+        "transformers_offline": os.environ.get("TRANSFORMERS_OFFLINE", "0"),
+        "hf_home": os.environ.get("HF_HOME", "not set"),
+        "easyocr_module_path": os.environ.get("EASYOCR_MODULE_PATH", "not set"),
+        "models_dir": str(MODELS_DIR),
+    }
 
 
 # Auto-setup model directories on import (but don't set offline mode yet)

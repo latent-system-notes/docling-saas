@@ -33,7 +33,7 @@ def models():
     "--all",
     "download_all",
     is_flag=True,
-    help="Download all models including optional",
+    help="Download all models including optional (EasyOCR, RapidOCR, VLM)",
 )
 @click.option(
     "--docling",
@@ -56,10 +56,26 @@ def models():
     default=None,
     help="Specific EasyOCR languages to download (e.g., --easyocr-lang en --easyocr-lang ar)",
 )
-def download(output, download_all, docling, vlm, easyocr, easyocr_lang):
+@click.option(
+    "--rapidocr",
+    is_flag=True,
+    help="Verify RapidOCR models (bundled with package)",
+)
+@click.option(
+    "-v", "--verbose",
+    is_flag=True,
+    help="Enable verbose logging",
+)
+def download(output, download_all, docling, vlm, easyocr, easyocr_lang, rapidocr, verbose):
     """Download models to ./models directory for offline use."""
-    from .config import disable_offline_mode
+    import logging
+    from .config import disable_offline_mode, is_offline_mode, MODELS_DIR, EASYOCR_MODELS_DIR
     from .model_manager import ModelManager
+
+    # Set logging level
+    if verbose:
+        logging.getLogger("docling-playground").setLevel(logging.DEBUG)
+        logging.getLogger("docling-playground.models").setLevel(logging.DEBUG)
 
     # Disable offline mode for downloads
     disable_offline_mode()
@@ -67,23 +83,30 @@ def download(output, download_all, docling, vlm, easyocr, easyocr_lang):
     manager = ModelManager(models_dir=output)
 
     def progress_callback(msg):
-        console.print(f"  {msg}")
+        console.print(f"  [dim]{msg}[/dim]")
 
-    console.print(f"[bold]Models directory: {manager.models_dir}[/bold]")
+    console.print(f"[bold]Models directory:[/bold] {manager.models_dir}")
+    console.print(f"[bold]HuggingFace cache:[/bold] {manager.huggingface_dir}")
+    console.print(f"[bold]EasyOCR cache:[/bold] {manager.easyocr_dir}")
+    console.print(f"[bold]Offline mode:[/bold] {'[red]DISABLED[/red]' if not is_offline_mode() else '[green]ENABLED[/green]'} (downloads allowed)")
     console.print()
 
     if download_all:
-        console.print("[bold]Downloading all models...[/bold]")
+        console.print("[bold cyan]Downloading ALL models (HuggingFace + EasyOCR + RapidOCR)...[/bold cyan]")
+        console.print()
 
-        # Download HuggingFace models
+        # Download HuggingFace models (includes EasyOCR and RapidOCR check)
         results = manager.download_all(include_optional=True, progress_callback=progress_callback)
 
-        # Download EasyOCR with default languages
-        console.print("  Downloading EasyOCR (en, ar)...")
-        manager.download_easyocr_model(["en", "ar"], progress_callback=progress_callback)
-
+        console.print()
+        console.print("[bold]Download Summary:[/bold]")
         success_count = sum(1 for v in results.values() if v)
-        console.print(f"[green]Downloaded {success_count}/{len(results)} models[/green]")
+        for model_id, success in results.items():
+            status = "[green]OK[/green]" if success else "[red]FAILED[/red]"
+            console.print(f"  {model_id}: {status}")
+
+        console.print()
+        console.print(f"[bold green]Downloaded {success_count}/{len(results)} models[/bold green]")
         return
 
     downloaded = False
@@ -103,6 +126,11 @@ def download(output, download_all, docling, vlm, easyocr, easyocr_lang):
         languages = list(easyocr_lang) if easyocr_lang else ["en", "ar"]
         console.print(f"[bold]Downloading EasyOCR models for {languages}...[/bold]")
         manager.download_easyocr_model(languages, progress_callback)
+        downloaded = True
+
+    if rapidocr:
+        console.print("[bold]Verifying RapidOCR models...[/bold]")
+        manager.download_rapidocr_models(progress_callback)
         downloaded = True
 
     if not downloaded:

@@ -55,11 +55,37 @@ export const api = {
         method: "POST",
       }),
 
+    downloadEasyOCR: (languages: string[] = ["en", "ar"]) =>
+      fetchJSON<{ success: boolean; languages: string[]; messages: string[] }>(
+        `${BASE}/models/download-easyocr`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(languages),
+        }
+      ),
+
+    verifyRapidOCR: () =>
+      fetchJSON<{ success: boolean; messages: string[] }>(
+        `${BASE}/models/verify-rapidocr`,
+        { method: "POST" }
+      ),
+
     clearCache: () =>
       fetchJSON<{ success: boolean }>(`${BASE}/models/cache`, {
         method: "DELETE",
       }),
 
     diskUsage: () => fetchJSON<DiskUsage>(`${BASE}/models/disk-usage`),
+
+    offlineStatus: () =>
+      fetchJSON<{
+        offline_mode: boolean;
+        hf_hub_offline: string;
+        transformers_offline: string;
+        hf_home: string;
+        easyocr_module_path: string;
+        models_dir: string;
+      }>(`${BASE}/models/offline-status`),
   },
 };

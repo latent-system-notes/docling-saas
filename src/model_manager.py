@@ -1,5 +1,6 @@
 """Model download and offline management."""
 
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -11,8 +12,11 @@ from .config import (
     MODELS_INFO,
     OCRLibrary,
     is_offline_mode,
+    get_offline_status,
 )
 from .models import ModelStatus
+
+logger = logging.getLogger("docling-playground.models")
 
 
 class ModelManager:
@@ -179,6 +183,7 @@ class ModelManager:
         try:
             from huggingface_hub import snapshot_download
 
+            logger.info(f"Starting download: {repo_id}")
             if progress_callback:
                 progress_callback(f"Downloading {repo_id}...")
 
@@ -186,17 +191,22 @@ class ModelManager:
             cache_dir = self.huggingface_dir / "hub"
             cache_dir.mkdir(parents=True, exist_ok=True)
 
+            logger.info(f"Cache directory: {cache_dir}")
+            logger.info(f"Offline mode: {is_offline_mode()}")
+
             snapshot_download(
                 repo_id=repo_id,
                 cache_dir=str(cache_dir),
             )
 
+            logger.info(f"Successfully downloaded: {repo_id}")
             if progress_callback:
                 progress_callback(f"Downloaded {repo_id}")
 
             return True
 
         except Exception as e:
+            logger.error(f"Failed to download {repo_id}: {e}")
             if progress_callback:
                 progress_callback(f"Failed to download {repo_id}: {e}")
             return False
@@ -204,6 +214,7 @@ class ModelManager:
     def download_easyocr_model(self, languages: list[str], progress_callback=None) -> bool:
         """Download EasyOCR models to local directory."""
         try:
+            logger.info(f"Starting EasyOCR download for languages: {languages}")
             if progress_callback:
                 progress_callback(f"Downloading EasyOCR models for {languages}...")
 
@@ -213,11 +224,13 @@ class ModelManager:
             # Set environment to use local directory
             os.environ["EASYOCR_MODULE_PATH"] = str(self.easyocr_dir)
 
+            logger.info(f"EasyOCR model directory: {self.easyocr_dir}")
             if progress_callback:
                 progress_callback(f"EasyOCR directory: {self.easyocr_dir}")
 
             import easyocr
             # Initialize reader to trigger download
+            logger.info("Initializing EasyOCR reader (this triggers model download)...")
             if progress_callback:
                 progress_callback("Initializing EasyOCR reader (this downloads models)...")
 
@@ -229,17 +242,47 @@ class ModelManager:
                 verbose=True,  # Enable verbose to see download progress
             )
 
+            logger.info(f"EasyOCR models downloaded successfully for: {languages}")
             if progress_callback:
                 progress_callback(f"EasyOCR models downloaded for {languages}")
             return True
 
         except ImportError as e:
+            logger.error(f"EasyOCR not installed: {e}")
             if progress_callback:
                 progress_callback(f"EasyOCR not installed: {e}")
             return False
         except Exception as e:
+            logger.error(f"Failed to download EasyOCR: {e}")
             if progress_callback:
                 progress_callback(f"Failed to download EasyOCR: {e}")
+            return False
+
+    def download_rapidocr_models(self, progress_callback=None) -> bool:
+        """Verify RapidOCR models are available (bundled with package)."""
+        try:
+            logger.info("Checking RapidOCR models (bundled with package)...")
+            if progress_callback:
+                progress_callback("Checking RapidOCR models...")
+
+            # RapidOCR models are bundled with the package
+            try:
+                from rapidocr_onnxruntime import RapidOCR
+                ocr = RapidOCR()
+                logger.info("RapidOCR models are available (bundled with package)")
+                if progress_callback:
+                    progress_callback("RapidOCR models are bundled and ready")
+                return True
+            except ImportError:
+                logger.warning("rapidocr_onnxruntime not installed")
+                if progress_callback:
+                    progress_callback("RapidOCR not installed - run: pip install rapidocr-onnxruntime")
+                return False
+
+        except Exception as e:
+            logger.error(f"RapidOCR check failed: {e}")
+            if progress_callback:
+                progress_callback(f"RapidOCR check failed: {e}")
             return False
 
     def download_model(self, model_id: str, progress_callback=None) -> bool:
@@ -294,19 +337,40 @@ class ModelManager:
         return self.download_easyocr_model(languages, progress_callback)
 
     def download_all(self, include_optional: bool = False, progress_callback=None) -> dict[str, bool]:
-        """Download all required (and optionally all) models."""
+        """Download all required (and optionally all) models including OCR."""
         results = {}
 
+        logger.info(f"Starting download_all (include_optional={include_optional})")
+        logger.info(f"Offline mode: {is_offline_mode()}")
+
+        # Download HuggingFace models
         for model_id, info in MODELS_INFO.items():
             if not include_optional and not info["required"]:
+                logger.debug(f"Skipping optional model: {model_id}")
                 continue
 
+            logger.info(f"Processing model: {info['name']}")
             if progress_callback:
                 progress_callback(f"Checking {info['name']}...")
 
             success = self.download_model(model_id, progress_callback)
             results[model_id] = success
 
+        # Always include OCR models when downloading all
+        if include_optional:
+            # Download EasyOCR models
+            logger.info("Downloading EasyOCR models (en, ar)...")
+            if progress_callback:
+                progress_callback("Downloading EasyOCR models (en, ar)...")
+            results["easyocr_all"] = self.download_easyocr_model(["en", "ar"], progress_callback)
+
+            # Verify RapidOCR
+            logger.info("Verifying RapidOCR models...")
+            if progress_callback:
+                progress_callback("Verifying RapidOCR models...")
+            results["rapidocr"] = self.download_rapidocr_models(progress_callback)
+
+        logger.info(f"Download complete. Results: {results}")
         return results
 
     def download_required(self, progress_callback=None) -> dict[str, bool]:
@@ -364,6 +428,10 @@ class ModelManager:
     def is_offline_mode(self) -> bool:
         """Check if offline mode is enabled."""
         return is_offline_mode()
+
+    def get_offline_status(self) -> dict:
+        """Get detailed offline mode status."""
+        return get_offline_status()
 
     def clear_cache(self) -> bool:
         """Clear the local models directory."""

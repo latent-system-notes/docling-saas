@@ -1,5 +1,6 @@
 """Core document processing logic using Docling."""
 
+import logging
 import time
 from pathlib import Path
 from typing import BinaryIO
@@ -20,7 +21,9 @@ from docling.datamodel.pipeline_options import (
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 
-from .config import Accelerator, OCRLibrary, PipelineType, enable_offline_mode
+from .config import Accelerator, OCRLibrary, PipelineType, enable_offline_mode, is_offline_mode
+
+logger = logging.getLogger("docling-playground.processor")
 from .models import (
     ChunkInfo,
     ProcessingOptions,
@@ -149,6 +152,11 @@ class DocumentProcessor:
         # Ensure offline mode is enabled during processing
         enable_offline_mode()
 
+        logger.info(f"Processing file: {file_path}")
+        logger.info(f"Offline mode: {is_offline_mode()}")
+        logger.info(f"OCR enabled: {options.ocr_enabled}, library: {options.ocr_library.value if options.ocr_enabled else 'N/A'}")
+        logger.info(f"Pipeline: {options.pipeline.value}, Accelerator: {options.accelerator.value}")
+
         timing = ProcessingTiming(total_seconds=0)
         start_time = time.perf_counter()
 
@@ -156,15 +164,21 @@ class DocumentProcessor:
             # Build converter if needed
             load_start = time.perf_counter()
             if self._needs_rebuild(options):
+                logger.info("Building document converter...")
                 self._converter = self._build_converter(options)
                 self._current_options = options
+                logger.info("Converter built successfully")
+            else:
+                logger.debug("Reusing existing converter")
             timing.loading_seconds = time.perf_counter() - load_start
 
             # Convert document
+            logger.info("Starting document conversion...")
             convert_start = time.perf_counter()
             result = self._converter.convert(file_path)
             doc = result.document
             convert_time = time.perf_counter() - convert_start
+            logger.info(f"Conversion completed in {convert_time:.2f}s")
 
             # Estimate stage times (Docling doesn't expose individual stage timing)
             if options.ocr_enabled:
