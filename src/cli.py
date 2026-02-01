@@ -267,7 +267,7 @@ def setup_offline(include_optional: bool):
     enable_offline_mode()
 
 
-@cli.command("serve-app")
+@cli.command("serve")
 @click.option(
     "--host",
     default="0.0.0.0",
@@ -281,14 +281,62 @@ def setup_offline(include_optional: bool):
     help="Server port",
     show_default=True,
 )
-def serve_app(host: str, port: int):
+@click.option(
+    "--build",
+    is_flag=True,
+    help="Build frontend before serving",
+)
+@click.option(
+    "--dev",
+    is_flag=True,
+    help="Run in development mode (auto-reload)",
+)
+def serve_app(host: str, port: int, build: bool, dev: bool):
     """Start the FastAPI + React playground server."""
+    import subprocess
     import uvicorn
+    from pathlib import Path
 
-    console.print(f"[green]Starting Docling Playground (FastAPI) on {host}:{port}[/green]")
+    frontend_dir = Path(__file__).parent.parent / "frontend"
+    dist_dir = frontend_dir / "dist"
+
+    # Build frontend if requested or if dist doesn't exist
+    needs_build = build or not dist_dir.exists()
+
+    if needs_build:
+        if not frontend_dir.exists():
+            console.print("[red]Frontend directory not found![/red]")
+            console.print("Make sure you have the frontend/ directory with package.json")
+            return
+
+        if not (frontend_dir / "node_modules").exists():
+            console.print("[yellow]Installing frontend dependencies...[/yellow]")
+            result = subprocess.run(
+                ["npm", "install"],
+                cwd=str(frontend_dir),
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                console.print(f"[red]npm install failed:[/red] {result.stderr}")
+                return
+
+        console.print("[yellow]Building frontend...[/yellow]")
+        result = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(frontend_dir),
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            console.print(f"[red]Build failed:[/red] {result.stderr}")
+            return
+        console.print("[green]Frontend built successfully![/green]")
+
+    console.print(f"[green]Starting Docling Playground on {host}:{port}[/green]")
     console.print(f"[blue]Open http://localhost:{port} in your browser[/blue]")
 
-    uvicorn.run("api.main:app", host=host, port=port)
+    uvicorn.run("api.main:app", host=host, port=port, reload=dev)
 
 
 @cli.command()
