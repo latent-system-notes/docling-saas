@@ -161,10 +161,10 @@ MODELS_INFO = {
     },
     "granite_docling_vlm": {
         "name": "GraniteDocling VLM",
-        "description": "Vision-Language Model for document understanding",
-        "size_mb": 4800,
+        "description": "Vision-Language Model for document understanding (used by VLM pipeline)",
+        "size_mb": 500,
         "required": False,
-        "hf_repo": "ibm-granite/granite-vision-3.1-2b-preview",
+        "hf_repo": "ibm-granite/granite-docling-258M",
         "subfolder": None,
     },
     "chunker_tokenizer": {

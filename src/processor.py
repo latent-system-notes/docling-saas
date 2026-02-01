@@ -89,33 +89,46 @@ class DocumentProcessor:
             num_threads=4,
         )
 
-        # Pipeline options
-        pipeline_options = PdfPipelineOptions(
-            accelerator_options=accelerator_options,
-            do_ocr=options.ocr_enabled,
-            do_table_structure=options.do_table_structure,
-            table_structure_options=TableStructureOptions(
-                mode=TableFormerMode.ACCURATE,
-            ),
-        )
-
-        # Set OCR options
-        if options.ocr_enabled:
-            ocr_options = self._get_ocr_options(options)
-            if ocr_options:
-                pipeline_options.ocr_options = ocr_options
-
-        # Handle VLM pipeline
+        # Handle VLM pipeline - needs different pipeline options
         if options.pipeline == PipelineType.VLM:
             try:
                 from docling.pipeline.vlm_pipeline import VlmPipeline
+                from docling.datamodel.pipeline_options import VlmPipelineOptions
 
                 pipeline_cls = VlmPipeline
+                pipeline_options = VlmPipelineOptions(
+                    accelerator_options=accelerator_options,
+                )
+                logger.info("Using VLM pipeline with VlmPipelineOptions")
             except ImportError:
                 # Fall back to standard if VLM not available
+                logger.warning("VLM pipeline not available, falling back to standard")
                 pipeline_cls = StandardPdfPipeline
+                pipeline_options = PdfPipelineOptions(
+                    accelerator_options=accelerator_options,
+                    do_ocr=options.ocr_enabled,
+                    do_table_structure=options.do_table_structure,
+                    table_structure_options=TableStructureOptions(
+                        mode=TableFormerMode.ACCURATE,
+                    ),
+                )
         else:
             pipeline_cls = StandardPdfPipeline
+            # Pipeline options for standard pipeline
+            pipeline_options = PdfPipelineOptions(
+                accelerator_options=accelerator_options,
+                do_ocr=options.ocr_enabled,
+                do_table_structure=options.do_table_structure,
+                table_structure_options=TableStructureOptions(
+                    mode=TableFormerMode.ACCURATE,
+                ),
+            )
+
+            # Set OCR options (only for standard pipeline)
+            if options.ocr_enabled:
+                ocr_options = self._get_ocr_options(options)
+                if ocr_options:
+                    pipeline_options.ocr_options = ocr_options
 
         # Build format options
         format_options = {
