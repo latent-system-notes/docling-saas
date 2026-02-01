@@ -1,5 +1,6 @@
-# Models directory (too large for git)
-models/
+# Models directory (too large for git, but not frontend components)
+/models/
+!frontend/src/components/models/
 
 # Python
 __pycache__/
