@@ -329,7 +329,11 @@ def serve_app(host: str, port: int, build: bool, dev: bool):
             text=True,
         )
         if result.returncode != 0:
-            console.print(f"[red]Build failed:[/red] {result.stderr}")
+            console.print(f"[red]Build failed![/red]")
+            if result.stdout:
+                console.print(result.stdout)
+            if result.stderr:
+                console.print(result.stderr)
             return
         console.print("[green]Frontend built successfully![/green]")
 
