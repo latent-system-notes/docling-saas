@@ -20,7 +20,7 @@ from docling.datamodel.pipeline_options import (
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 
-from .config import Accelerator, OCRLibrary, PipelineType
+from .config import Accelerator, OCRLibrary, PipelineType, enable_offline_mode
 from .models import (
     ChunkInfo,
     ProcessingOptions,
@@ -146,6 +146,9 @@ class DocumentProcessor:
         options: ProcessingOptions,
     ) -> ProcessingResult:
         """Process a document file."""
+        # Ensure offline mode is enabled during processing
+        enable_offline_mode()
+
         timing = ProcessingTiming(total_seconds=0)
         start_time = time.perf_counter()
 

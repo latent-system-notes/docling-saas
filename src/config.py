@@ -14,8 +14,8 @@ EASYOCR_MODELS_DIR = MODELS_DIR / "easyocr"
 RAPIDOCR_MODELS_DIR = MODELS_DIR / "rapidocr"
 
 
-def setup_offline_environment():
-    """Set up environment variables to use local models directory and enable offline mode."""
+def setup_model_directories():
+    """Set up model directories and cache paths (but not offline mode)."""
     # Create directories if they don't exist
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     HUGGINGFACE_MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -33,13 +33,26 @@ def setup_offline_environment():
     # Set EasyOCR model storage
     os.environ["EASYOCR_MODULE_PATH"] = str(EASYOCR_MODELS_DIR)
 
-    # Always enable offline mode - no downloads allowed
+
+def enable_offline_mode():
+    """Enable offline mode - no downloads allowed."""
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 
-# Auto-setup offline environment on import
-setup_offline_environment()
+def disable_offline_mode():
+    """Disable offline mode - allow downloads."""
+    os.environ["HF_HUB_OFFLINE"] = "0"
+    os.environ["TRANSFORMERS_OFFLINE"] = "0"
+
+
+def is_offline_mode() -> bool:
+    """Check if offline mode is enabled."""
+    return os.environ.get("HF_HUB_OFFLINE") == "1"
+
+
+# Auto-setup model directories on import (but don't set offline mode yet)
+setup_model_directories()
 
 
 class Accelerator(str, Enum):

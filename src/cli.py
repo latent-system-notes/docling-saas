@@ -58,7 +58,11 @@ def models():
 )
 def download(output, download_all, docling, vlm, easyocr, easyocr_lang):
     """Download models to ./models directory for offline use."""
+    from .config import disable_offline_mode
     from .model_manager import ModelManager
+
+    # Disable offline mode for downloads
+    disable_offline_mode()
 
     manager = ModelManager(models_dir=output)
 
@@ -207,13 +211,11 @@ def setup_offline(include_optional: bool):
     This downloads models to ./models and ensures the app can run
     fully offline. Run this once before using serve or serve-app.
     """
-    import os
+    from .config import disable_offline_mode, enable_offline_mode
     from .model_manager import ModelManager
-    from .config import HUGGINGFACE_MODELS_DIR
 
-    # Temporarily disable offline mode so we can download
-    os.environ["HF_HUB_OFFLINE"] = "0"
-    os.environ["TRANSFORMERS_OFFLINE"] = "0"
+    # Disable offline mode for downloads
+    disable_offline_mode()
 
     manager = ModelManager()
     console.print(f"[bold]Models directory: {manager.models_dir}[/bold]")
@@ -262,8 +264,7 @@ def setup_offline(include_optional: bool):
         console.print("  Check your internet connection and try again.")
 
     # Re-enable offline mode
-    os.environ["HF_HUB_OFFLINE"] = "1"
-    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    enable_offline_mode()
 
 
 @cli.command("serve-app")

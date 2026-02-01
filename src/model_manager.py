@@ -172,30 +172,24 @@ class ModelManager:
         return data
 
     def download_hf_model(self, repo_id: str, progress_callback=None) -> bool:
-        """Download a HuggingFace model to local directory."""
+        """Download a HuggingFace model to local directory.
+
+        Note: Caller is responsible for disabling offline mode before calling this.
+        """
         try:
             from huggingface_hub import snapshot_download
 
             if progress_callback:
                 progress_callback(f"Downloading {repo_id}...")
 
-            # Temporarily disable offline mode for download
-            old_offline = os.environ.get("HF_HUB_OFFLINE")
-            os.environ["HF_HUB_OFFLINE"] = "0"
-
             # Download to local huggingface directory
             cache_dir = self.huggingface_dir / "hub"
             cache_dir.mkdir(parents=True, exist_ok=True)
 
-            try:
-                snapshot_download(
-                    repo_id=repo_id,
-                    cache_dir=str(cache_dir),
-                )
-            finally:
-                # Restore offline mode
-                if old_offline is not None:
-                    os.environ["HF_HUB_OFFLINE"] = old_offline
+            snapshot_download(
+                repo_id=repo_id,
+                cache_dir=str(cache_dir),
+            )
 
             if progress_callback:
                 progress_callback(f"Downloaded {repo_id}")
