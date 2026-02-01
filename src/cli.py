@@ -6,8 +6,6 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from .config import DEFAULT_SERVER_HOST, DEFAULT_SERVER_PORT
-
 console = Console()
 
 
@@ -16,35 +14,6 @@ console = Console()
 def cli():
     """Docling Playground - Interactive document processing."""
     pass
-
-
-@cli.command()
-@click.option(
-    "--host",
-    default=DEFAULT_SERVER_HOST,
-    help="Server host address",
-    show_default=True,
-)
-@click.option(
-    "--port",
-    default=DEFAULT_SERVER_PORT,
-    type=int,
-    help="Server port",
-    show_default=True,
-)
-@click.option(
-    "--share",
-    is_flag=True,
-    help="Create a public Gradio link",
-)
-def serve(host: str, port: int, share: bool):
-    """Start the Gradio playground server (always runs offline)."""
-    # Offline mode is always enabled via config.py
-    console.print("[yellow]Running in offline mode (using local models)[/yellow]")
-    console.print(f"[green]Starting Docling Playground on {host}:{port}[/green]")
-
-    from .app import main as app_main
-    app_main(host=host, port=port, share=share)
 
 
 @cli.group()

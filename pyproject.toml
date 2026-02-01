@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Interactive Docling document processing playground"
 requires-python = ">=3.11"
 dependencies = [
-    "gradio>=5.0",
     "docling>=2.70",
     "transformers>=4.40",
     "pydantic>=2.0",

@@ -179,7 +179,3 @@ DEFAULT_OPTIONS = {
     "output_format": OutputFormat.MARKDOWN,
     "chunk_max_tokens": 512,
 }
-
-# Server configuration
-DEFAULT_SERVER_PORT = 7860
-DEFAULT_SERVER_HOST = "0.0.0.0"
