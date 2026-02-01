@@ -10,7 +10,7 @@ from .config import (
     EASYOCR_MODELS_DIR,
     MODELS_INFO,
     OCRLibrary,
-    setup_offline_environment,
+    is_offline_mode,
 )
 from .models import ModelStatus
 
@@ -349,8 +349,8 @@ class ModelManager:
         return results
 
     def is_offline_mode(self) -> bool:
-        """Check if offline mode is enabled (always True)."""
-        return True
+        """Check if offline mode is enabled."""
+        return is_offline_mode()
 
     def clear_cache(self) -> bool:
         """Clear the local models directory."""
